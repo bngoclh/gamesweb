@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Ma page</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body>
+  <h1 id="page">Ma page</h1>
+  <!-- Contenu de la page -->
+
+  <section>
+    <h2>Comments</h2>
+    <div id="comments"></div>
+    <form id="commentForm">
+      <input type="text" id="nameInput" placeholder="Your Name" required />
+      <textarea id="commentInput" placeholder="Your Comment" required></textarea>
+      <button type="submit">Submit</button>
+    </form>
+  </section>
+
+  <div id="listOfComments"></div>
+
+  <div id="extractComments"></div>
+</body>
+<script>
+  // Fonction pour récupérer les paramètres de l'URL
+  function getURLParams() {
+    var params = {};
+    var search = window.location.search.substring(1);
+    var pairs = search.split("&");
+    for (var i = 0; i < pairs.length; i++) {
+      var pair = pairs[i].split("=");
+      if (pair.length === 2) {
+        var key = decodeURIComponent(pair[0]);
+        var value = decodeURIComponent(pair[1]);
+        params[key] = value;
+      }
+    }
+    return params;
+  }
+
+  // Exemple d'utilisation
+  var params = getURLParams();
+
+  function loadData(params) {
+    axios
+      .get("/games/MainPageGame/" + params.id)
+      .then((response) => {
+        const game = response.data;
+        const gameItemEl = document.createElement("div");
+        gameItemEl.innerHTML = `
+            <h2 id="name" value="${game.slug}" >${game.name}</h2>
+            <p id="link" value="${game.metacritic_url}" >Metacritic Score: ${game.metacritic
+          }/100</p>
+                        <p>Platforms: 
+                            ${game.platforms
+            .map((platform) => platform.platform.name)
+            .sort()
+            .join(", ")}
+                        </p>
+                        <p>Rating: ${game.rating}/5</p>
+            <p>Genres: ${game.genres
+            .map((genres) => genres.name)
+            .sort()
+            .join(", ")}</p>
+
+            <img src="${game.background_image
+          }" style="position: absolute; top: 0; right: 0; width: 300px; height: 150px;">
+
+            <p>${game.description}</p> 
+
+            <p>Developers: ${game.developers
+            .map((developpers) => developpers.name)
+            .join(", ")}</p>
+
+            <p>Release Date: ${formatDate(game.released)}</p>
+
+                        
+                       
+            `;
+        document
+          .getElementById("page")
+          .insertAdjacentElement("afterend", gameItemEl);
+
+        const meta_url = game.metacritic_url;
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
+  loadData(params);
+
+  // Fonction pour formater la date
+  function formatDate(dateString) {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, options);
+  }
+
+  function submitComment() {
+    // Récupérer les valeurs des champs de saisie
+    var author = document.getElementById("nameInput").value;
+    var comment = document.getElementById("commentInput").value;
+
+    var game = document.getElementById("name").getAttribute("value");
+
+    // Créer un nouvel objet FormData
+    const formData = JSON.stringify({
+      game: game,
+      comment: comment,
+      author: author,
+    });
+
+    // Affiche les données
+
+    // Envoyer les données vers l'URL spécifiée
+    axios
+      .post("/comments", JSON.parse(formData))
+      .then((response) => {
+        // Réussite de la requête
+        console.log(response.data);
+        // Réinitialiser les champs de saisie
+        document.getElementById("nameInput").value = "";
+        document.getElementById("commentInput").value = "";
+
+        window.location.reload();
+      })
+      .catch((error) => {
+        // Erreur lors de la requête
+        console.error(error);
+      });
+  }
+
+  function fetchComments() {
+    var game = document.getElementById("name").getAttribute("value");
+
+    axios
+      .get("/comments/" + game)
+      .then((response) => {
+        const comments = response.data;
+        const commentsContainer = document.getElementById("listOfComments");
+        commentsContainer.innerHTML = "";
+
+        comments.forEach((comment) => {
+          const commentEl = document.createElement("div");
+          commentEl.innerHTML = `
+              <h3>${comment.author}</h3>
+              <p>${comment.comment}</p>
+            `;
+          commentsContainer.appendChild(commentEl);
+        });
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(() => {
+      fetchComments();
+      //scrapeComment();
+      verifyBD();
+    }, 1000);
+  });
+
+  document
+    .getElementById("commentForm")
+    .addEventListener("submit", submitComment);
+
+  function scrapeComment() {
+    var url = document.getElementById("link").getAttribute("value");
+    var game = document.getElementById("name").getAttribute("value");
+
+    const formData = JSON.stringify({
+      url: url,
+    });
+
+    axios
+      .post("/comments/scrape/", JSON.parse(formData))
+      .then((response) => {
+        const comments = response.data;
+        const commentsContainer = document.getElementById("extractComments");
+        commentsContainer.innerHTML = "";
+
+        const comment1 = comments.quotes[0].replace(/\n/g, "").trim();
+        const comment2 = comments.quotes[1].replace(/\n/g, "").trim();
+        const comment3 = comments.quotes[2].replace(/\n/g, "").trim();
+
+        const commentList = JSON.stringify({
+          comment1: comment1,
+          comment2: comment2,
+          comment3: comment3,
+          game: game,
+        });
+
+        //commentList.append("game", game);
+
+
+        const commentListObj = JSON.parse(commentList);
+
+        const commentEl1 = document.createElement("div");
+        commentEl1.innerHTML = `
+            <p>---${commentListObj.comment1}--</p>
+          `;
+        commentsContainer.appendChild(commentEl1);
+
+        const commentEl2 = document.createElement("div");
+        commentEl2.innerHTML = `
+            <p>---${commentListObj.comment2}--</p>
+          `;
+        commentsContainer.appendChild(commentEl2);
+
+        const commentEl3 = document.createElement("div");
+        commentEl3.innerHTML = `
+            <p>---${commentListObj.comment3}--</p>
+          `;
+        commentsContainer.appendChild(commentEl3);
+
+//commentList n'a rien, il est vide, il faut essayer de le remplir mais il est bien renvoyé dans le baclend
+        axios
+          .post("/comments/addMetaComments/", JSON.parse(commentList))
+          .then((response) => {
+            console.log(response.data);
+            //fetchComments();
+          })
+          .catch((error) => {
+            console.error(error);
+          })
+
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
+  function verifyBD() {
+    var game = document.getElementById("name").getAttribute("value");
+
+    axios.get("/comments/verify/" + game).then((response) => {
+      const comments = response.data.comments;
+
+
+
+      //console.log(comments[0].commentsList);
+
+
+      if (comments.length == 0) {
+        scrapeComment();
+
+      } else {
+
+
+
+        const commentsContainer = document.getElementById("extractComments");
+        commentsContainer.innerHTML = "";
+
+        for (var value of comments[0].commentsList.values()) {
+          const commentEl = document.createElement("div");
+          commentEl.innerHTML = `
+            <p>---${value}--</p>
+          `;
+          commentsContainer.appendChild(commentEl);
+        }
+      }
+    });
+  }
+</script>
+
+</html>

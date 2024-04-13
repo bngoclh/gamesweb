@@ -1,0 +1,138 @@
+<html>
+
+<body>
+  <h1>Hello world !</h1>
+
+  <div id="js-preloader" class="js-preloader loaded">
+    <div class="preloader-inner">
+      <span class="dot"></span>
+      <div class="dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="most-popular">
+          <div class="row">
+            <div class="col-lg-12">
+              <div class="heading-section"></div>
+              <div class="row gameList"></div>
+              <div class="col-lg-12">
+                <div class="main-button">
+                  <a href="javascript:void(0)">Load More Games</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    const gameList = document.querySelector(".gameList");
+    const loaderEl = document.getElementById("js-preloader");
+    const loadMoreGamesBtn = document.querySelector(".main-button");
+
+    const getPlatformStr = (platforms) => {
+      const platformStr = platforms.map((pl) => pl.platform.name).join(", ");
+      if (platformStr.length > 30) {
+        return platformStr.substring(0, 30) + "...";
+      }
+      return platformStr;
+    };
+
+    // Faites une requête vers l'URL "/getGames" en utilisant axios
+    function loadData() {
+      axios
+        .get("/games/FirstPage")
+        .then((responses) => {
+          const games = responses.data;
+
+          games.forEach((game) => {
+            const gameItemEl = `
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="item" id="${game.id}">
+                                    <img src="${game.background_image}" alt="${game.name} image">                                    
+                                    <h4 class="game-name">${game.name}<br>
+                                      <span class="platforms">${getPlatformStr(game.parent_platforms)}</span></h4>
+                                    <ul>
+                                        <li><i class="fa fa-star"></i> <span class="rating">${game.rating}</span></li>
+                                        <li><i class="fa-regular fa-calendar"></i> <span class="date">${game.released}</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        `;
+            gameList.insertAdjacentHTML("beforeend", gameItemEl);
+          });
+          loaderEl.classList.add("loaded");
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
+    loadData();
+    loadGameMainPage();
+
+
+    loadMoreGamesBtn.addEventListener("click", () => {
+      axios
+        .get("/games/NextPage")
+        .then((responses) => {
+          const games = responses.data;
+
+          games.forEach((game) => {
+            const gameItemEl = `
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="item" id="${game.id}">
+                                    <img src="${game.background_image}" alt="${game.name} image">
+                                    <h4 class="game-name">${game.name}<br>
+                                      <span class="platforms">${getPlatformStr(game.parent_platforms)}</span></h4>
+                                    <ul>
+                                        <li><i class="fa fa-star"></i> <span class="rating">${game.rating}</span></li>
+                                        <li><i class="fa-regular fa-calendar"></i> <span class="date">${game.released}</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        `;
+            gameList.insertAdjacentHTML("beforeend", gameItemEl);
+          });
+          loaderEl.classList.add("loaded");
+          loadGameMainPage();
+
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    });
+    function loadGameMainPage() {
+      const mainGameBtns = document.querySelectorAll(".item");
+
+      mainGameBtns.forEach((btn) => {
+        btn.addEventListener("click", (event) => {
+          const clickedElementId = event.target.parentElement.id;
+          window.location.href = `/game/?id=${clickedElementId}`;
+        });
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      setTimeout(() => {
+      loadGameMainPage();
+      }, 500);
+    });
+
+
+
+    // Redirigez l'utilisateur vers la page de détails du jeu en utilisant un fragment d'URL pour passer l'ID du jeu
+    // window.location.href = `/games/${clickedElementId}?_embed=game`;
+  </script>
+</body>
+
+</html>
